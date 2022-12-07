@@ -10,7 +10,6 @@ class Node:
     def size(self):
         raise Exception
 
-
 class Dir(Node):
     def __init__(self):
         self.contents = {}
@@ -19,9 +18,13 @@ class Dir(Node):
         self.contents[name] = n
 
     def size(self):
-        res = sum(n.size() for n in self.contents.values())
-        print(res)
-        return res
+        return sum(n.size() for n in self.contents.values())
+
+    def get_directory_sizes(self):
+        tmp = [
+            n.get_directory_sizes() for n in self.contents.values() if type(n) is Dir
+        ]
+        return [self.size()] + [e for sublist in tmp for e in sublist]
 
     def get(self, n):
         return self.contents[n]
@@ -65,4 +68,9 @@ if __name__ == "__main__":
                 else:
                     curr.add(filename, File(int(attr)))
 
-    root.size()
+    root_nested_directory_sizes = root.get_directory_sizes()
+    root_size = max(root_nested_directory_sizes)
+    print(sum([r for r in root_nested_directory_sizes if r <= 100000]))  # p1
+
+    size_to_delete = root_size - (70000000 - 30000000)
+    print(min([r for r in root_nested_directory_sizes if r >= size_to_delete]))  # p2
