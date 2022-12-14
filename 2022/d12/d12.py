@@ -29,22 +29,17 @@ def run(nodes, edges, source):
         return dist[], prev[]
     """
     dist = defaultdict(lambda: sys.maxsize)
-    prev = defaultdict(lambda: None)
     unvisited = nodes.copy()
 
     dist[source] = 0
 
-    while len(unvisited) > 0:
-        u = min(unvisited, key=lambda x: dist[x])
+    while unvisited:
+        u = min(unvisited, key=dist.__getitem__)
         unvisited.remove(u)
 
         for neighbor in edges[u]:
             if neighbor in unvisited:
-                alt = dist[u] + 1
-                if alt < dist[neighbor]:
-                    dist[neighbor] = alt
-                    prev[neighbor] = u
-
+                dist[neighbor] = min(dist[neighbor], dist[u] + 1)
     return dist
 
 
