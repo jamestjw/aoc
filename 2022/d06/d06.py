@@ -2,13 +2,8 @@
 This file contains a code attempt for advent of code day 6
 """
 
-
-import os
-
 if __name__ == "__main__":
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
-
-    my_tests = open(f"d06_tests_input.txt", "r", encoding="utf-8").read().strip()
+    my_tests = open(f"input.txt", "r", encoding="utf-8").read().strip()
 
     P1_LEN = 4
     P2_LEN = 14
