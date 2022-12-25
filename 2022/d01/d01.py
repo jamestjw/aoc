@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     my_tests = []
     day = __file__.split("\\", maxsplit=-1)[-1][:-3]
-    with open(f"{day}_tests_input.txt", "r", encoding="utf-8") as file:
+    with open("input.txt", "r", encoding="utf-8") as file:
         content = file.readlines()
         for line in content:
             my_tests.append(line.rstrip("\n"))
