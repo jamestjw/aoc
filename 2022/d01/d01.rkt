@@ -4,10 +4,18 @@
 
 (define elf-strings (string-split file-contents "\n\n"))
 
-(define elf-calories (map
-                      (lambda (elf)
-                        (apply + (map string->number (string-split elf))))
-                      elf-strings))
+;(define elf-calories (map
+;                      (lambda (elf)
+;                        (apply + (map string->number (string-split elf))))
+;                      elf-strings))
+
+(define elf-calories
+  (map
+   (compose
+    (curry apply +)
+    (curry gitmap string->number)
+    string-split)
+   elf-strings))
 
 (module* main #f
   (begin
