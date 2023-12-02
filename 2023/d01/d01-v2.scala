@@ -19,8 +19,7 @@ import scala.io.Source
         }
     }
 
-    println(inp.map(_.foldRight(List[Char]())
-                               ((c,a) => if c.isDigit then c :: a else a))
+    println(inp.map(_.filter(_.isDigit))
                .map(l => List(l.head , l.last).mkString.toInt).sum)
 
 
