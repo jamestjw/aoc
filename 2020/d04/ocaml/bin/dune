@@ -1,0 +1,4 @@
+(executable
+ (public_name d04)
+ (name main)
+ (libraries d04 core str))

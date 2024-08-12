@@ -1,2 +1,3 @@
 (executable
+ (libraries core fmt)
  (name d01))
