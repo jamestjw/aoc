@@ -1,0 +1,4 @@
+(executable
+ (public_name d08)
+ (name main)
+ (libraries d08 core fmt angstrom))

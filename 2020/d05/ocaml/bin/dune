@@ -1,0 +1,4 @@
+(executable
+ (public_name d05)
+ (name main)
+ (libraries d05 core fmt))
