@@ -1,0 +1,4 @@
+(executable
+ (public_name d09_ocaml)
+ (name main)
+ (libraries d09_ocaml fmt core))
