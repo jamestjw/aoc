@@ -1,0 +1,15 @@
+suppose that (a, b) are coprime
+
+we want positive integers a', b' such that 
+
+a' = K * a
+b' = K * b
+
+for some positive K.
+
+i.e. that a'/a = b'/b
+--> a' * b = b' * a
+
+and well guess what, the solution would be a' = a and b' = b since the lowest
+common multiple would be a * b
+
