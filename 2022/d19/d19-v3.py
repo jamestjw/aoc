@@ -6,7 +6,7 @@ from functools import lru_cache, reduce
 
 # ore, clay, obsidian, geode
 empty = (0, 0, 0, 0)
-start_inventory = (0, 0, 0, 0)
+start_inventory = empty
 start_robots = (0, 0, 0, 0)
 blueprint = (
     (4, 0, 0, 0),
@@ -15,6 +15,12 @@ blueprint = (
     (2, 0, 7, 0),
 )
 
+blueprint = (
+    (2, 0, 0, 0),
+    (3, 0, 0, 0),
+    (3, 8, 0, 0),
+    (3, 0, 12, 0),
+)
 TYPES = ["ore", "clay", "obsidian", "geode"]
 
 
@@ -42,7 +48,15 @@ def all_gte(t1, t2):
     return all(gte(t1, t2))
 
 
-def all_lt(t1, t2):
+def some_gt(t1, t2):
+    return any(tuple(i > j for i, j in zip(t1, t2)))
+
+
+def some_lt(t1, t2):
+    return any(tuple(i < j for i, j in zip(t1, t2)))
+
+
+def all_lte(t1, t2):
     return all(tuple(i <= j for i, j in zip(t1, t2)))
 
 
@@ -58,6 +72,25 @@ def max_by_geode(t1, t2):
 
 
 iter_best = defaultdict(lambda: empty + empty)
+iter_best_geode = defaultdict(lambda: 0)
+
+
+def set_iter_best(curr, inventory, robots, pending_robots):
+    val = inventory + (add(robots, pending_robots))
+    if all_lte(val, iter_best[curr]):
+        return False
+    if some_gt(val, iter_best[curr]) and not some_lt(val, iter_best[curr]):
+        print(f"new iter best: {curr} {val}")
+        iter_best[curr] = val
+    return True
+
+
+def set_iter_best_geode(curr, robots, pending_robots):
+    val = add(robots, pending_robots)[3]
+    if val < iter_best_geode[curr]:
+        return False
+    iter_best_geode[curr] = max(iter_best_geode[curr], val)
+    return True
 
 
 @lru_cache
@@ -68,75 +101,44 @@ def go(
     robots,
     pending_robots,
     blueprint,
-    declined_purchases,
 ):
     if curr_iter == max_iter:
         # print(inventory, robots)
         return inventory
 
-    # ore, clay, obsidian, geode = inventory
-    # oreR, clayR, obsidianR, geodeR = robots
-    # oreCost, clayCost, obsidianCost, geodeCost = blueprint
-    # oreDeclined, clayDeclined, obsidianDeclined, geodeDeclined = declined_purchases
+    if not set_iter_best(curr_iter, inventory, robots, pending_robots):
+        return inventory
 
-    if all(declined_purchases):
-        new_inventory = add(inventory, robots)
-        new_robots = add(robots, pending_robots)
+    if not set_iter_best_geode(curr_iter, robots, pending_robots):
+        return inventory
 
-        remaining_iter = max_iter - curr_iter
-        if all_lt(new_inventory + new_robots, iter_best[remaining_iter]):
-            # import pdb; pdb.set_trace()
-            return iter_best[curr_iter][:4]  # short circuit
+    new_inventory = add(inventory, robots)
+    new_robots = add(robots, pending_robots)
 
-        return go(
+    res = []
+    for delta_inventory, cost in possible_purchases2(blueprint, new_inventory):
+        res.append(
+            go(
+                curr_iter + 1,
+                max_iter,
+                sub(new_inventory, cost),
+                new_robots,
+                delta_inventory,  # reset pending robots
+                blueprint,
+            )
+        )
+
+    res.append(
+        go(
             curr_iter + 1,
             max_iter,
             new_inventory,
             new_robots,
             empty,  # reset pending robots
             blueprint,
-            (False,) * 4,  # reset declined purchases
         )
-    else:
-        next_type = next(
-            i for i, declined in enumerate(declined_purchases) if not declined
-        )
-        cost = blueprint[next_type]
-        if all(gte(inventory, cost)):
-            buy = go(
-                curr_iter,
-                max_iter,
-                sub(inventory, cost),
-                robots,
-                add(pending_robots, one_at(next_type)),
-                blueprint,
-                declined_purchases,  # don't decline since might want to purchase again
-            )
-            no_buy = go(
-                curr_iter,
-                max_iter,
-                inventory,
-                robots,
-                pending_robots,
-                blueprint,
-                declined_purchases[:next_type]
-                + (True,)
-                + declined_purchases[next_type + 1 :],
-            )
-            return max_by_geode(buy, no_buy)
-        else:
-            # Can't afford to build
-            return go(
-                curr_iter,
-                max_iter,
-                inventory,
-                robots,
-                pending_robots,
-                blueprint,
-                declined_purchases[:next_type]
-                + (True,)
-                + declined_purchases[next_type + 1 :],
-            )
+    )
+    return max(res, key=lambda x: x[3])
 
 
 def bfs(blueprint, max_iter):
@@ -224,101 +226,13 @@ def bfs(blueprint, max_iter):
 
 
 @lru_cache(maxsize=None)
-def possible_purchases(blueprint, inventory):
-    def helper(declined_purchases, inventory, bought):
-        if all(declined_purchases):
-            return {(inventory, bought)}
-        else:
-            next_type = next(
-                i for i, declined in enumerate(declined_purchases) if not declined
-            )
-            cost = blueprint[next_type]
-            # Can afford to buy
-            if all(gte(inventory, cost)):
-                # Add key for purchase
-                option1 = helper(
-                    declined_purchases,  # don't decline since might want to purchase again
-                    sub(inventory, cost),
-                    add(bought, one_at(next_type)),
-                )
-
-                # Decline the purchase
-                option2 = helper(
-                    declined_purchases[:next_type]
-                    + (True,)
-                    + declined_purchases[
-                        next_type + 1 :
-                    ],  # don't decline since might want to purchase again
-                    inventory,
-                    bought,
-                )
-                return option1 | option2
-
-            else:
-                # Can't afford to buy, so mark as declined
-                return helper(
-                    declined_purchases[:next_type]
-                    + (True,)
-                    + declined_purchases[next_type + 1 :],
-                    inventory,
-                    bought,
-                )
-
-    return list(helper((False,) * 4, inventory, empty))
-
-
-# @lru_cache(maxsize=1024)
-@lru_cache(maxsize=None)
-def helper(blueprint, declined_purchases, inventory, bought):
-    if all(declined_purchases):
-        return {(inventory, bought)}
-    else:
-        next_type = next(
-            i for i, declined in enumerate(declined_purchases) if not declined
-        )
-        cost = blueprint[next_type]
+def possible_purchases2(blueprint, inventory):
+    purchases = []
+    for i, cost in enumerate(blueprint):
         # Can afford to buy
         if all(gte(inventory, cost)):
-            # Add key for purchase
-            option1 = helper(
-                blueprint,
-                declined_purchases,  # don't decline since might want to purchase again
-                sub(inventory, cost),
-                add(bought, one_at(next_type)),
-            )
-
-            # Decline the purchase
-            option2 = helper(
-                blueprint,
-                declined_purchases[:next_type]
-                + (True,)
-                + declined_purchases[
-                    next_type + 1 :
-                ],  # don't decline since might want to purchase again
-                inventory,
-                bought,
-            )
-            return option1 | option2
-
-        else:
-            # Can't afford to buy, so mark as declined
-            return helper(
-                blueprint,
-                declined_purchases[:next_type]
-                + (True,)
-                + declined_purchases[next_type + 1 :],
-                inventory,
-                bought,
-            )
-
-
-@lru_cache(maxsize=None)
-def possible_purchases2(blueprint, inventory):
-    res = [(inventory, empty)]
-    for i, cost in enumerate(blueprint):
-        if all_gte(inventory, cost):
-            res.append((sub(inventory, cost), one_at(i)))
-    return res
+            purchases.append((one_at(i), cost))
+    return purchases
 
 
 def should_prune(blueprint, robots):
@@ -355,7 +269,7 @@ def bfs2(blueprint, max_iter):
                     remaining_iter = max_iter - curr_iter
                     if should_prune(blueprint, robots):
                         continue
-                    if all_lt(new_inventory2 + new_robots, iter_best[remaining_iter]):
+                    if all_lte(new_inventory2 + new_robots, iter_best[remaining_iter]):
                         continue
 
                     if all_gte(new_inventory2 + new_robots, iter_best[remaining_iter]):
@@ -371,11 +285,10 @@ def run_iter(i):
         (1, 0, 0, 0),
         empty,
         blueprint,
-        (False,) * 4,
     )
 
 
-# res = run_iter(15)
+print(run_iter(24))
 
 # bfs(blueprint,15)
 # bfs2(blueprint, 24)
