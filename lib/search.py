@@ -1,20 +1,25 @@
+import math
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from queue import PriorityQueue
-import math
+from typing import Tuple
 
 
-class Grid:
-    def get(self, coords):
-        raise NotImplementedError()
+class Grid(ABC):
+    @abstractmethod
+    def get(self, coords: Tuple[int, int]): ...
 
-    def is_valid(self, coords):
-        raise NotImplementedError()
+    @abstractmethod
+    def is_valid(self, coords: Tuple[int, int]) -> bool: ...
+
+    @abstractmethod
+    def neighbors(self, coords: Tuple[int, int]) -> list[Tuple[int, int]]: ...
+
+    @abstractmethod
+    def cost(self, src, dest): ...
 
     def get_offset(self, coords, offset):
         return self.get((coords[0] + offset[0], coords[1] + offset[1]))
-
-    def neighbors(self, coords):
-        raise NotImplementedError()
 
     def move(self, coords, offset):
         return coords[0] + offset[0], coords[1] + offset[1]
@@ -45,6 +50,9 @@ class BaseGrid(Grid):
                 res.append(new_coords)
         return res
 
+    def cost(self, src, dest):
+        return self.get(dest)
+
 
 def djikstra(grid: Grid, dest):
     cost_dict = defaultdict(lambda: math.inf)
@@ -56,7 +64,7 @@ def djikstra(grid: Grid, dest):
         cost, coords = q.get_nowait()
 
         for neighbor in grid.neighbors(coords):
-            new_cost = cost + grid.get(neighbor)
+            new_cost = cost + grid.cost(coords, neighbor)
             if new_cost < cost_dict[neighbor]:
                 cost_dict[neighbor] = new_cost
                 q.put_nowait((new_cost, neighbor))
@@ -80,7 +88,7 @@ def astar(grid: Grid, dest, heuristic=manhattan):
         for neighbor in grid.neighbors(coords):
             new_cost = (
                 cost
-                + grid.get(neighbor)
+                + grid.cost(coords, neighbor)
                 + heuristic(neighbor, dest)
                 - heuristic(coords, dest)
             )
