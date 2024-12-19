@@ -27,6 +27,6 @@ print(d[(0, 0)] - 1)
 
 for x, y in blocks[num_fallen:]:
     grid[x][y] = math.inf
-    if start not in djikstra(BaseGrid(grid), dest):
+    if start not in astar(BaseGrid(grid), dest):
         print(f"{x},{y}")
         break
